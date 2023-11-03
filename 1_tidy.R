@@ -3,7 +3,7 @@ library(tidyverse)
 
 # Read data ---------------------------------------------------------------
 
-df <-  readr::read_delim('OImpactoDaIncontinnc_DATA_2023-10-03_1943.csv',
+df <-  readr::read_delim('OImpactoDaIncontinnc_DATA_2023-11-03_1748.csv',
                         delim = '|')
 
 
@@ -102,6 +102,9 @@ df |>
 # UERJ project ------------------------------------------------------------
 
 df_uerj <- df_inicio |>
+  filter(redcap_data_access_group == 'uerj')
+
+df_uerj <- df |>
   filter(redcap_data_access_group == 'uerj')
 
 
