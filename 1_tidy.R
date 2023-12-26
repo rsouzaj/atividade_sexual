@@ -3,7 +3,7 @@ library(tidyverse)
 
 # Read data ---------------------------------------------------------------
 
-df <-  readr::read_delim('OImpactoDaIncontinnc_DATA_2023-10-03_1943.csv',
+df <-  readr::read_delim('OImpactoDaIncontinnc_DATA_2023-12-26_1813.csv',
                         delim = '|')
 
 
@@ -68,7 +68,7 @@ df |>
     reposicao_th = case_when(
       reposicao_th == 0 ~'Não',
       reposicao_th == 1 ~ 'Sim',
-      reposicao_th == 3 ~ 'Interrompeu'
+      reposicao_th == 2 ~ 'Interrompeu'
     ),
     tempo_abstinencia_sexual = case_when(
       tempo_abstinencia_sexual == 1 ~ 'Há menos de um mês',
@@ -96,12 +96,12 @@ df |>
 
   ) |>
   select(record_id, redcap_data_access_group, idade, imc, everything(),
-         -ends_with('complete'), -ends_with('timestamp'), -data_consulta) -> df_inicio
+         -ends_with('complete'), -ends_with('timestamp'), -data_consulta) -> df_tidy
 
 
 # UERJ project ------------------------------------------------------------
 
-df_uerj <- df_inicio |>
+df_uerj <- df_tidy |>
   filter(redcap_data_access_group == 'uerj')
 
 
@@ -110,7 +110,7 @@ readr::write_csv(df_uerj, 'df_uerj.csv')
 
 # Unigranrio project ------------------------------------------------------
 
-df_unigranrio <- df_inicio |>
+df_unigranrio <- df_tidy |>
   filter(redcap_data_access_group == 'unigranrio')
 
 readr::write_csv(df_unigranrio, 'df_unigranrio.csv')
