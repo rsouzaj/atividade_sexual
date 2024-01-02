@@ -1,16 +1,6 @@
 library(tidyverse)
 
 
-df |>
-  group_by(redcap_data_access_group) |>
-  summarise(
-    N = n(),
-    mean_age = mean(idade, na.rm=T),
-    min_age = min(idade, na.rm=T),
-    max_age = max(idade, na.rm=T)
-  )
-
-
 names(df)
 
 df |>
