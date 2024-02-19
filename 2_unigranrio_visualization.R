@@ -10,13 +10,22 @@ str(df)
 
 
 
+# Variável desfecho? ------------------------------------------------------
+
+## Disfunção sexual - prevalência
+### Qual a definição, como é medida?
+#### Escore FSFI - quanto maior, pior (tem ponto de corte?)
+###
+### Em que poupulação?
+
+
 # Tidy --------------------------------------------------------------------
 
 
 df_breno <- df |>
   filter(
-    redcap_data_access_group  == 'unigranrio',
-    sintomas_climaterio___1 == 1 | menopausa == 1 |
+    redcap_data_access_group  == 'unigranrio', #filtrar somente Unigranrio
+    sintomas_climaterio___1 == 1 | menopausa == 1 | # População: mulheres no climatério
       sintomas_climaterio___2 == 1 |
       sintomas_climaterio___3 == 1 |
       sintomas_climaterio___4 == 1
@@ -51,6 +60,7 @@ df_breno <- df |>
   rowwise() |>
   mutate(
     iciq_score = sum(c_across(iciq_1:iciq_3)),
+    fsfi_score = sum(c_across(fsfi_interesse:fsfi_dor)),
     IUU = if_else(
       iciq_4___2 == 1 |
         iciq_4___3 == 1 |
@@ -81,10 +91,15 @@ df_breno |>
   geom_boxplot()
 
 
+mean(df_breno$idade)
+median(df_breno$idade)
+
+
 df_breno |>
-  filter(idade<75) |>
+  filter(idade < 75) |>
   ggplot(aes(idade)) +
   geom_histogram()
+
 
 df_breno |>
   ggplot(aes(imc))+
@@ -95,12 +110,78 @@ df_breno |>
   geom_histogram()
 
 
+## Parece haver dois grupos (clusters) diferentes
+df_breno |>
+  ggplot(aes(fsfi_score))+
+  geom_histogram()
+
+
+df_breno |>
+  ggplot(aes(fsfi_score, fill = as.factor(tipo_incontinencia)))+
+  geom_boxplot()
+
+df_breno |>
+  ggplot(aes(idade, fsfi_score))+
+  geom_point()+
+  geom_smooth(method = 'lm')
+
+funcao_sex <- function(x){
+  df_breno |>
+   ggplot(aes({{x}}))+
+    geom_bar()
+}
+
+
+funcao_sex(fsfi_interesse)
+funcao_sex(fsfi_excitacao) # Algumas mulheres responderam diferente
+                           # devem ter confundido excitação fora da atividade sexual
+
+funcao_sex(fsfi_lubrificacao) # lubrificação tb
+funcao_sex(fsfi_orgasmo)
+funcao_sex(fsfi_satisfacao)
+funcao_sex(fsfi_dor)
+
+df_breno |>
+  select(fsfi_excitacao, fsfi_orgasmo) |> View()
+
+df_breno |>
+  select(fsfi_interesse:fsfi_dor) |>
+  gtsummary::tbl_summary()
+
+
+df_breno |>
+  select(fsfi_lubrificacao, fsfi_orgasmo) |> View()
+
+## Temos que trabalhar os dados para torná-los homogêneos
+df_breno |>
+  select(fsfi_dor, fsfi_orgasmo) |> View()
+
+## Temos que manipular os dados para que fiquem coerentes
+
+df_breno <- df_breno |>
+  filter(!is.na(fsfi_interesse)) |> # retira as observações NA
+  mutate(
+    fsfi_excitacao = if_else(fsfi_orgasmo == 0, 0, fsfi_excitacao),
+    fsfi_lubrificacao = if_else(fsfi_orgasmo == 0, 0, fsfi_lubrificacao),
+    ) |>
+  rowwise() |> # tem que refazer o escore
+  mutate(fsfi_score = sum(c_across(fsfi_interesse:fsfi_dor)))
+
+
+
+
+
+
+
+
+
+
 df_breno |>
   group_by(tipo_incontinencia) |>
 summarise(
   N = n(),
-       media = mean(idade),
-       mediana = median(idade),
+       media_idade = mean(idade),
+       mediana_idade = median(idade),
        media_imc = mean(imc, na.rm = T),
        mediana_imc = median(imc, na.rm = T)
        )
