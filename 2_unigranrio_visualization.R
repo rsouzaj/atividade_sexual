@@ -2,7 +2,7 @@ library(tidyverse)
 
 
 df <-
-  readr::read_delim('OImpactoDaIncontinnc_DATA_2024-02-07_1356.csv',
+  readr::read_delim('OImpactoDaIncontinnc_DATA_2024-04-17_1750.csv',
                     delim = '|')
 
 names(df)
@@ -31,7 +31,7 @@ df_breno <- df |>
       sintomas_climaterio___4 == 1
   ) |>
   mutate(imc = round(peso / ((altura / 100) ^ 2), digits = 1),
-         iciq_3 = as.numeric(iciq_3),) |>
+         iciq_3 = as.numeric(iciq_3)) |>
   select(
     record_id,
     idade,
@@ -73,6 +73,7 @@ df_breno <- df |>
                   '1', '0'),
     tipo_incontinencia = case_when(
       iciq_4___1 == 1 | is.na(iciq_score) ~ 'Continente',
+      IUU == 0 & IUE == 0 ~ 'Continente',
       IUU == 1 & IUE == 1 ~ 'IUM',
       IUU == 1 & IUE == 0 ~ 'IUU',
       IUU == 0 & IUE == 1 ~ 'IUE'
@@ -96,7 +97,7 @@ median(df_breno$idade)
 
 
 df_breno |>
-  filter(idade < 75) |>
+  # filter(idade < 75) |>
   ggplot(aes(idade)) +
   geom_histogram()
 
@@ -141,8 +142,11 @@ funcao_sex(fsfi_orgasmo)
 funcao_sex(fsfi_satisfacao)
 funcao_sex(fsfi_dor)
 
+
+
+
 df_breno |>
-  select(fsfi_excitacao, fsfi_orgasmo) |> View()
+  select(fsfi_excitacao, fsfi_lubrificacao) |> View()
 
 df_breno |>
   select(fsfi_interesse:fsfi_dor) |>
@@ -158,7 +162,7 @@ df_breno |>
 
 ## Temos que manipular os dados para que fiquem coerentes
 
-df_breno <- df_breno |>
+df_breno_controle <- df_breno |>
   filter(!is.na(fsfi_interesse)) |> # retira as observações NA
   mutate(
     fsfi_excitacao = if_else(fsfi_orgasmo == 0, 0, fsfi_excitacao),
@@ -168,9 +172,14 @@ df_breno <- df_breno |>
   mutate(fsfi_score = sum(c_across(fsfi_interesse:fsfi_dor)))
 
 
+df_breno_controle |>
+  ggplot(aes(fsfi_score))+
+  geom_histogram()
 
 
-
+df_breno |>
+  ggplot(aes(fsfi_score))+
+  geom_histogram()
 
 
 

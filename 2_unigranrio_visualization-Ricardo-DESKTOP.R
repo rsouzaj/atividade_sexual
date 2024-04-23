@@ -33,6 +33,7 @@ df_breno <- df |>
     atividade_semanal,
     escolaridade,
     etnia,
+    starts_with('sintomas_climaterio'),
     starts_with('comorbi'),
     parto_normal,
     parto_cesaria,
