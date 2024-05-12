@@ -110,7 +110,8 @@ df_fim <- df_breno|>
   select(record_id:etnia,Fogachos,`Ressecamento vaginal`, parto_normal:tipo_incontinencia, fsfi_score) |>
   mutate(
     atividade_semanal = if_else(is.na(atividade_semanal), 0 , atividade_semanal)
-  )
+  ) |>
+  filter(!is.na(fsfi_score))
 
 
 # Tabela 1 ----------------------------------------------------------------
@@ -148,7 +149,8 @@ gtsummary::tbl_summary(
 ) |>
   gtsummary::bold_labels() |>
   gtsummary::modify_header(label = '**Características**') |>
-  gtsummary::as_flex_table()
+  gtsummary::as_flex_table() |>
+  flextable::save_as_docx(path = "table_1.docx")
 
 
 
@@ -321,8 +323,10 @@ df_fim |>
     )
   )|>
   gtsummary::bold_labels() |>
+  gtsummary::add_p() |>
   gtsummary::modify_header(label = '**Características**') |>
-  gtsummary::as_flex_table()
+  gtsummary::as_flex_table() |>
+  flextable::save_as_docx(path = "table_2.docx")
 
 
 
@@ -332,9 +336,11 @@ df_fim |>
 
 df_fim$norm_fsfi_score <- as.numeric(scale(df_fim$fsfi_score))
 
+df_fim$norm_idade <- as.numeric(scale(df_fim$idade))
+
 cor_idade_fsfi <- glm(data=df_fim, fsfi_score~idade)
 
-cor_idade_fsfi_norm <- glm(data=df_fim, norm_fsfi_score~idade)
+cor_idade_fsfi_norm <- glm(data=df_fim, norm_fsfi_score~norm_idade)
 
 
 summary(cor_idade_fsfi_norm)

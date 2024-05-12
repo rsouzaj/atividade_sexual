@@ -99,8 +99,9 @@ median(df_breno$idade)
 df_breno |>
   # filter(idade < 75) |>
   ggplot(aes(idade)) +
-  geom_histogram()
+  geom_histogram( boundary = 45, bins = 6)
 
+hist(df_fim$idade, nclass = 'FD')
 
 df_breno |>
   ggplot(aes(imc))+
@@ -112,10 +113,12 @@ df_breno |>
 
 
 ## Parece haver dois grupos (clusters) diferentes
-df_breno |>
+df_fim|>
   ggplot(aes(fsfi_score))+
-  geom_histogram()
+  geom_histogram(bins = nclass.FD(df_fim$fsfi_score),
+                 boundary= 0)
 
+hist(df_fim$fsfi_score, breaks = 'FD')
 
 df_breno |>
   ggplot(aes(fsfi_score, fill = as.factor(tipo_incontinencia)))+
