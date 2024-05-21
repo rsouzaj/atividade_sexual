@@ -356,30 +356,53 @@ p_value <-  ifelse(
 )
 
 
+#
+# df_fim |>
+#   ggplot(aes(idade, fsfi_score))+
+#   geom_point()+
+#   geom_smooth(method = 'glm', se = T)+
+#   geom_text(
+#     aes(
+#       label = paste0(
+#         'p-value = ', p_value
+#       )
+#     ),
+#     x = 45,
+#     y = 4,
+#     size = 3,
+#     family = "Source Sans Pro"
+#   )+
+#   labs(
+#     x = 'Idade (anos)',
+#     y = 'Escore do FSFI'
+#   )+
+#   theme_classic(base_size = 8)+
+#   guides(
+#     size =  guide_none()
+#   )
 
 df_fim |>
   ggplot(aes(idade, fsfi_score))+
   geom_point()+
   geom_smooth(method = 'glm', se = T)+
-  geom_text(
-    aes(
-      label = paste0(
-        'p-value = ', p_value
-      )
-    ),
-    x = 45,
-    y = 3,
-    size = 5,
-    family = "Source Sans Pro"
+  annotate("text",
+           label = paste0(
+             'p-value = ', p_value
+           ),
+           x = 45,
+           y = 2.5,
+           size = 3
   )+
   labs(
-    x = 'Idade',
+    x = 'Idade (anos)',
     y = 'Escore do FSFI'
   )+
-  theme_classic(base_size = 18, base_family = "Source Sans Pro")
+  theme_classic(base_size = 8)+
+  guides(
+    size =  guide_none()
+  )
 
-
-ggsave('fig_1.jpg', dpi = 300)
+ggsave('fig_1.png', dpi = 300)
 
 
 
