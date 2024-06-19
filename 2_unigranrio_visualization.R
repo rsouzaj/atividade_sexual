@@ -2,7 +2,7 @@ library(tidyverse)
 
 
 df <-
-  readr::read_delim('OImpactoDaIncontinnc_DATA_2024-04-17_1750.csv',
+  readr::read_delim('OImpactoDaIncontinnc_DATA_2024-06-13_1844.csv',
                     delim = '|')
 
 names(df)
@@ -101,7 +101,7 @@ df_breno |>
   ggplot(aes(idade)) +
   geom_histogram( boundary = 45, bins = 6)
 
-hist(df_fim$idade, nclass = 'FD')
+hist(df_artigo_1$idade, nclass = 'FD', xlim = c(45, 80))
 
 df_breno |>
   ggplot(aes(imc))+

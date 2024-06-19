@@ -278,7 +278,7 @@ fun_sexual(fsfi_dor)
 ### Fogachos p_value = 0.0861
 
 df_fim |>
-  # filter(idade< 65) |>
+  filter(idade< 65) |>
   ggplot(aes(Fogachos, fsfi_score))+
   geom_boxplot()
 
