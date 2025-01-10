@@ -4,23 +4,28 @@
 
 
 library(tidyverse)
+library(officer)
 
 
 
 # Banco de dados ----------------------------------------------------------
 
 df <-
-  readr::read_delim('OImpactoDaIncontinnc_DATA_2024-06-13_1844.csv',
+  readr::read_delim('OImpactoDaIncontinnc_DATA_2024-11-28_1035.csv',
                     delim = '|')
 
 ## Idade entre 45 e 65 anos
 ## Sintomas de climatério ou amenorreia (menopausa)
 
 df_artigo_1 <- df |>
+  mutate(
+    menopausa = ifelse(idade>=55, 1, menopausa) # Considerado todas as mulheres acima de 55 na menopausa
+  ) |>
   filter(
     # redcap_data_access_group  == 'unigranrio', #filtrar somente Unigranrio
     idade <= 65 & idade >= 45,
     sintomas_climaterio___1 == 1 | menopausa == 1 | # População: mulheres no climatério
+                                                    # ou com algum sintoma
       sintomas_climaterio___2 == 1 |
       sintomas_climaterio___3 == 1 |
       sintomas_climaterio___4 == 1
@@ -74,7 +79,8 @@ df_artigo_1 <- df |>
       IUU == 1 & IUE == 0 ~ 'UUI',
       IUU == 0 & IUE == 1 ~ 'SUI'
     )
-  )
+  ) |>
+  filter(comorbidades___1 != 1)
 
 
 
@@ -87,14 +93,19 @@ mutate(
   civil = case_when(
     civil == 1 ~ 'Single',
     civil == 2 ~ 'Married',
-    civil == 3 ~ 'Married', # considerei união estável como casada
+    civil == 3 ~ 'Civil Union', # considerei união estável como casada
     civil == 4 ~ 'Divorced',
-    civil == 5 ~ 'Widow'
+    civil == 5 ~ 'Widowed'
+  ),
+  civil = fct(civil),
+  civil = fct_relevel(
+    civil,
+    c('Single', 'Civil Union', 'Married', 'Divorced', 'Widowed')
   ),
   tabagismo = case_when(
     tabagismo == 0 ~ 'No',
     tabagismo == 1 ~ 'Yes',
-    tabagismo == 2 ~ 'Interrupted'
+    tabagismo == 2 ~ 'Former smoker'
   ),
   atividade_fisica = case_when(
     atividade_fisica == 0 ~ 'No',
@@ -134,8 +145,8 @@ mutate(
     reposicao_th == 2 ~ 'Interrupted'
   )),
 
-  disfuncao_sexual = if_else(tempo_abstinencia_sexual<3, "No", "Yes"),
-  disfuncao_sexual_binary = if_else(tempo_abstinencia_sexual<3, 0, 1),
+  disfuncao_sexual = if_else(tempo_abstinencia_sexual>2, "Dysfunctional", "Functional"),
+  disfuncao_sexual_binary = if_else(tempo_abstinencia_sexual>2, 1, 0),
 
   tempo_abstinencia_sexual = case_when(
     tempo_abstinencia_sexual == 1 ~ 'Less than a month',
@@ -180,7 +191,8 @@ mutate(
   Oligomenorrhea = if_else(sintomas_climaterio___3 == 0, 'No', 'Yes'),
   `Vaginal dryness` = if_else(sintomas_climaterio___4 == 0, 'No', 'Yes')
 
-)
+) |>
+  filter(!is.na(disfuncao_sexual))
 
 
 
@@ -294,14 +306,22 @@ fisher.test(df_artigo_1_fim$escolaridade, df_artigo_1_fim$disfuncao_sexual)
 
 chisq.test(df_artigo_1_fim$antidepressivo, df_artigo_1_fim$disfuncao_sexual)
 
-fisher.test(df_artigo_1_fim$antidepressivo, df_artigo_1_fim$disfuncao_sexual)
+table(df_artigo_1_fim$antidepressivo, df_artigo_1_fim$disfuncao_sexual)
 
+#     No Yes
+# No  49  34
+# Yes  8   9
+
+fisher.test(df_artigo_1_fim$antidepressivo, df_artigo_1_fim$disfuncao_sexual)
+#p-value = 0.4254
+#
 chisq.test(df_artigo_1_fim$atrapalha_relacao, df_artigo_1_fim$disfuncao_sexual)
 # p-value = 4.667e-08
 
 summary(
 glm(data = df_artigo_1_fim, disfuncao_sexual_binary ~ atrapalha_relacao, family = binomial() )
 )
+
 
 # Coefficients:
 #   Estimate Std. Error z value Pr(>|z|)
@@ -323,7 +343,9 @@ glm(data = df_artigo_1_fim, disfuncao_sexual_binary ~ atrapalha_relacao, family 
 # Number of Fisher Scoring iterations: 16
 
 
-
+summary(
+  glm(data = df_artigo_1_fim, disfuncao_sexual_binary ~ idade+ atrapalha_relacao + civil, family = binomial() )
+)
 
 chisq.test(df_artigo_1_fim$sintomas_climaterio___1, df_artigo_1_fim$disfuncao_sexual)
 # p-value = 0.2192
@@ -347,11 +369,51 @@ chisq.test(df_artigo_1_fim$comorbidades___6, df_artigo_1_fim$disfuncao_sexual)
 #  p-value = 0.05652
 
 df_artigo_1_fim |>
-  count(comorbidades___6)
-# comorbidades___6        n
-#                 <dbl> <int>
-# 1                0    53
-# 2                1     4
+  count(comorbidades___1) # Câncer
+
+df_artigo_1_fim |>
+  count(comorbidades___2) # Diabetes
+#   comorbidades___2     n
+#<dbl> <int>
+  #1                0    95
+  #2                1    29
+
+df_artigo_1_fim |>
+  count(comorbidades___3) # doença autoimune
+
+
+df_artigo_1_fim |>
+  count(comorbidades___4) # Endometriose
+
+df_artigo_1_fim |>
+  count(comorbidades___5)
+
+
+df_artigo_1_fim |>
+  count(comorbidades___6) #Fibromialgia
+# comorbidades___6     n
+# <dbl> <int>
+# 1                0   113
+# 2                1    11
+
+
+df_artigo_1_fim |>
+  count(comorbidades___7)
+
+df_artigo_1_fim |>
+  count(comorbidades___8) # HAS
+# comorbidades___8     n
+# <dbl> <int>
+# 1                0    66
+# 2                1    58
+
+
+df_artigo_1_fim |>
+  count(comorbidades___9) # SBDF
+
+df_artigo_1_fim |>
+  count(comorbidades___10) #Sindrome do intestino irritável
+
 
 # UERJ
 #   comorbidades___6            n
@@ -363,6 +425,256 @@ df_artigo_1_fim |>
 
 
 chisq.test(df_artigo_1_fim$comorbidades___10, df_artigo_1_fim$disfuncao_sexual)
+
+
+
+
+# Table 1 -----------------------------------------------------------------
+
+min(df_artigo_1_fim$idade)
+max(df_artigo_1_fim$idade)
+
+## Verificar se hot flashes e vaginal dryness afetam o escore
+
+vaginal_dry <- glm(data = df_artigo_1_fim,
+    fsfi_score~`Vaginal dryness`)
+
+hot_flashes <- glm(data = df_artigo_1_fim,
+                   fsfi_score~`Hot flashes`)
+
+oligome <- glm(data = df_artigo_1_fim,
+                   fsfi_score~Oligomenorrhea)
+
+summary(vaginal_dry)
+summary(hot_flashes)
+summary(oligome)
+
+gtsummary::tbl_regression(vaginal_dry)
+
+gtsummary::tbl_regression(hot_flashes)
+
+gtsummary::tbl_regression(oligome)
+
+gtsummary::tbl_regression(c(vaginal_dry, hot_flashes))
+
+chisq.test(df_artigo_1_fim$`Hot flashes`,
+         df_artigo_1_fim$`Vaginal dryness`)
+
+table(df_artigo_1_fim$`Hot flashes`,
+       df_artigo_1_fim$`Vaginal dryness`)
+
+# Aplicação do tema do JAMA
+gtsummary::theme_gtsummary_journal("jama")
+
+# Tema BMJ
+
+gtsummary::theme_gtsummary_journal("bmj")
+
+
+table_1 <- df_artigo_1_fim |>
+  select(
+    idade:civil,
+    reposicao_th,
+    # tempo_abstinencia_sexual,
+    # atrapalha_relacao,
+    fsfi_score,
+    `Vaginal dryness`,
+    `Hot flashes`,
+    disfuncao_sexual
+  ) |>
+  gtsummary::tbl_summary(
+    by = disfuncao_sexual,
+    statistic = list(
+      c(idade, imc, fsfi_score
+        # parto_normal, parto_cesaria
+      )~"{mean} ({sd})"
+    ),
+    missing = 'no',
+    label = list(
+      idade = "Age; years",
+      imc = "BMI",
+      civil = "Marital status",
+      reposicao_th = "Hormonal therapy",
+      # atrapalha_relacao = "Affect sexual intimacy",
+      fsfi_score = "FSFI score"
+    )
+  ) |>
+  gtsummary::add_p()|>
+  gtsummary::bold_labels() |>
+  gtsummary::modify_header(label = '**Characteristics**') |>
+  gtsummary::as_flex_table() |>
+  flextable::width(j = 1:2, width = 2.5)
+
+
+
+# Exportação para Word
+doc <- read_docx() |>
+  officer::body_add_par("Table 1: Characteristics of study participants stratified by sexual dysfunction status",
+                        style = "Table Caption") |>
+  body_add_par("") |>
+  flextable::body_add_flextable(value = table_1)
+
+# Salvar o documento
+print(doc, target = "tabela_1.docx")
+
+# Idade vs parceiro -------------------------------------------------------
+
+df_artigo_1_fim |>
+  filter(!is.na(atrapalha_relacao)) |>
+  ggplot(aes(idade, fill = atrapalha_relacao))+
+  geom_boxplot()
+
+
+
+
+# Table 2 ----------------------------------------------------------------
+
+
+df_artigo_1_fim |>
+  select(idade, civil, atividade_fisica,
+         tempo_abstinencia_sexual, starts_with('sintomas')) |>
+  gtsummary::tbl_summary(
+    by = tempo_abstinencia_sexual,
+    missing = 'no',
+    statistic = list(
+      c(idade, fsfi_score)~"{mean} ({sd})"),
+    label = c(
+      idade ~ "Idade (anos)",
+      civil ~ "Estado civil",
+      atividade_fisica ~"Prática de atividade física",
+      fsfi_score ~ 'Escore do FSFI'
+    )
+  )|>
+  gtsummary::bold_labels() |>
+  gtsummary::add_p() |>
+  gtsummary::modify_header(label = '**Características**') |>
+  gtsummary::as_flex_table() |>
+  flextable::save_as_docx(path = "table_2.docx")
+
+
+
+
+
+# Patients without dysfunction --------------------------------------------
+
+df_dimensions |>
+  filter(disfuncao_sexual =="No") |>
+  ggplot(aes(dimensions_score, fill = sexual_dimensions))+
+  geom_boxplot() +
+    facet_wrap(~civil)
+
+
+df_dimensions |>
+  filter(disfuncao_sexual =="No") |>
+  ggplot(aes( idade, dimensions_score))+
+  geom_point()+
+  facet_wrap(~sexual_dimensions)
+
+
+df_dimensions |>
+  filter(disfuncao_sexual =="No") |> # Mulheres que tiveram relação nos últimos 6 meses
+  ggplot(aes( sexual_dimensions, dimensions_score, fill = `Hot flashes`))+
+  geom_boxplot()
+
+
+
+df_dimensions |>
+  filter(disfuncao_sexual =="No") |> # Mulheres que tiveram relação nos últimos 6 meses
+  ggplot(aes( sexual_dimensions, dimensions_score, fill = `Vaginal dryness`))+
+  geom_boxplot()
+
+# Table 3 -----------------------------------------------------------------
+
+
+
+df_artigo_1_fim |>
+ select(fsfi_interesse:fsfi_dor,
+        `Hot flashes`) |>
+  gtsummary::tbl_summary(
+    by = `Hot flashes`,
+    missing = "no",
+    type = list(fsfi_interesse:fsfi_dor ~ "continuous")
+    )  |>
+  gtsummary::add_p()
+
+
+df_artigo_1_fim |>
+  filter(!is.na(fsfi_score)) |>
+  select(fsfi_interesse:fsfi_dor,
+         `Vaginal dryness`) |>
+  gtsummary::tbl_summary(
+    by = `Vaginal dryness`,
+    missing = "no",
+    type = list(fsfi_interesse:fsfi_dor ~ "continuous")
+  )  |>
+  gtsummary::add_p()
+
+
+# Medir o poder estatístico de uma amostra
+
+# Dimentions --------------------------------------------------------------
+
+
+## Algo errado que não está certo!
+##
+df_dimensions <- df_artigo_1_fim |>
+  pivot_longer(
+    cols = c(fsfi_interesse:fsfi_dor),
+    names_to = "sexual_dimensions",
+    values_to = "dimensions_score"
+  )
+
+  df_dimensions |>
+    ggplot(aes(dimensions_score, idade, fill = 'sexual_dimentions'))+
+    geom_point()
+
+
+  df_artigo_1_fim |>
+    ggplot(aes(f))
+
+df_artigo_1_fim |>
+  mutate(
+    tempo_abstinencia_sexual= if_else(
+      tempo_abstinencia_sexual == "Less than a month" | tempo_abstinencia_sexual == "Between one and six months",
+      1, 0
+    )
+    )|>
+  filter(tempo_abstinencia_sexual == 1) |>
+  select(idade,imc,
+         # escolaridade,
+         reposicao_th,
+         starts_with("sintomas_cl"),
+         tempo_abstinencia_sexual,
+         fsfi_interesse:fsfi_dor,
+         ) |>
+
+  gtsummary::tbl_summary(
+    by = tempo_abstinencia_sexual,
+    missing = 'no',
+    statistic = list(
+      c(idade, imc)~"{mean} ({sd})"),
+    label = c(
+      idade ~ "Idade (anos)"
+      # civil ~ "Estado civil",
+      # atividade_fisica ~"Prática de atividade física",
+      # fsfi_score ~ 'Escore do FSFI'
+    )
+  )|>
+  gtsummary::bold_labels() |>
+  gtsummary::add_p() |>
+  gtsummary::modify_header(label = '**Características**') |>
+  gtsummary::as_flex_table()
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -382,5 +694,119 @@ df_artigo_1 |>
   ggplot(aes(idade))+
   geom_histogram( bins = 8)
 
+table(df$fsfi_dor)
+table(df$fsfi_excitacao)
+
+count(as.character(df$fsfi_dor))
+
+df |>
+  filter(fsfi_lubrificacao == 0) |>
+  select(starts_with('fsfi')) |>
+  filter(fsfi_excitacao > 0)
+
+test_rows <- df |>
+  select(fsfi_excitacao, fsfi_lubrificacao, fsfi_orgasmo, fsfi_dor)
+
+inconstistent_row <- test_rows[rowSums(test_rows == 0)> 0 & rowSums(test_rows==0)< 4,]
+print(inconstistent_row)
 
 
+vars_of_interest <- c("fsfi_excitacao", 'fsfi_lubrificacao', 'fsfi_orgasmo', 'fsfi_dor')
+
+inconsistent_rows <- df[rowSums(df[, vars_of_interest] == 0) > 0 &
+                          rowSums(df[, vars_of_interest] == 0) < 4, ]
+
+print("Inconsistent rows:")
+print(inconsistent_rows[, vars_of_interest])
+
+df[rowSums(df[, vars_of_interest] == 0) > 0, vars_of_interest] <- 0
+
+df_update <- df_artigo_1_fim |>
+  mutate(across(all_of(vars_of_interest),
+                ~ if_else(rowSums(across(all_of(vars_of_interest)) == 0) > 0, 0, .)))
+
+
+df_update %>% select(all_of(vars_of_interest))
+
+changed_rows <- df_update %>%
+  filter(rowSums(across(all_of(vars_of_interest)) == 0) > 0) %>%
+  select(all_of(vars_of_interest))
+
+print(changed_rows, n = 50)
+
+  0.037 < 0.05
+
+  50/(50+73)
+
+  73/(50+73)
+
+  df_artigo_1_fim |>
+    filter(tempo_abstinencia_sexual != 'Less than a month'
+           & atrapalha_relacao != 'Urinay incontinence') |>
+    ggplot(aes(fsfi_interesse, fill = atrapalha_relacao)) +
+    geom_bar(position = 'dodge') +
+    labs(
+      x = "Sexual desire or interest",
+      y = "Frequency",
+      fill = "Interferes with relationship"  # Changed 'legend' to 'fill' for correct legend title
+    ) +
+    scale_x_continuous(breaks = 1:5,
+                       labels = c(
+                         "1" = "Almost never\nor never",
+                         "2" = "A few times\n(less than half\nthe time)",
+                         "3" = "Sometimes\n(about half\nthe time)",
+                         "4" = "Most times\n(more than half\nthe time)",
+                         "5" = "Almost always\nor always"
+                       )
+    ) +
+    theme_minimal(base_size = 14) +  # Increased base font size
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 10),
+      axis.text.y = element_text(size = 12),
+      axis.title = element_text(size = 14, face = "bold"),
+      legend.text = element_text(size = 12),
+      legend.title = element_text(size = 14, face = "bold"),
+      plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+      strip.background = element_rect(fill = "lightgray"),
+      strip.text = element_text(face = "bold")
+    ) +
+    scale_fill_brewer(palette = "Set2")
+
+
+  ## Grey scale
+
+
+  df_artigo_1_fim |>
+    filter(tempo_abstinencia_sexual != 'Less than a month'
+           & atrapalha_relacao != 'Urinay incontinence') |>
+    ggplot(aes(fsfi_interesse, fill = atrapalha_relacao)) +
+    geom_bar(position = 'dodge') +
+    labs(
+      x = "Sexual desire or interest",
+      y = "Frequency",
+      fill = "Interferes with relationship"
+    ) +
+    scale_x_continuous(breaks = 1:5,
+                       labels = c(
+                         "1" = "Almost never\nor never",
+                         "2" = "A few times\n(less than half\nthe time)",
+                         "3" = "Sometimes\n(about half\nthe time)",
+                         "4" = "Most times\n(more than half\nthe time)",
+                         "5" = "Almost always\nor always"
+                       )
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 10),
+      axis.text.y = element_blank(),  # Exclude y-axis text
+      axis.title = element_text(size = 14, face = "bold"),
+      legend.text = element_text(size = 12),
+      legend.title = element_text(size = 14, face = "bold"),
+      plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+      strip.background = element_rect(fill = "lightgray"),
+      strip.text = element_text(face = "bold"),
+      panel.grid.major = element_line(color = "gray90"),
+      panel.grid.minor = element_line(color = "gray95")
+    ) +
+    scale_fill_grey(start = 0.2, end = 0.9) +
+    guides(fill = guide_legend(reverse = TRUE))
